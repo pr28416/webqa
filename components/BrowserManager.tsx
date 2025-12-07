@@ -92,19 +92,39 @@ export default function BrowserManager() {
       </div>
       {/* Display browser instance details if one is loaded */}
       {instance && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{instance.id}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Display CDP WebSocket URL */}
-            <p className="text-sm mb-2">{instance.cdp_ws_url}</p>
-            {/* Button to delete the current browser instance */}
-            <Button onClick={handleDelete} variant="destructive" size="sm">
-              Delete
-            </Button>
-          </CardContent>
-        </Card>
+        <>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>{instance.id}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Display CDP WebSocket URL */}
+              <p className="text-sm mb-2">{instance.cdp_ws_url}</p>
+              {/* Button to delete the current browser instance */}
+              <Button onClick={handleDelete} variant="destructive" size="sm">
+                Delete
+              </Button>
+            </CardContent>
+          </Card>
+          {/* Live view iframe */}
+          {instance.browser_live_view_url && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Live View</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="w-full border rounded-lg overflow-hidden">
+                  <iframe
+                    src={instance.browser_live_view_url}
+                    className="w-full h-[600px] border-0"
+                    title="Browser Live View"
+                    allow="clipboard-read; clipboard-write"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

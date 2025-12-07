@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   const instance: BrowserInstance = {
     id: kernelBrowser.session_id,
     cdp_ws_url: kernelBrowser.cdp_ws_url,
+    browser_live_view_url: kernelBrowser.browser_live_view_url || "",
   };
   return NextResponse.json(instance);
 }
@@ -43,6 +44,7 @@ export async function POST() {
   const instance: BrowserInstance = {
     id: kernelBrowser.session_id,
     cdp_ws_url: kernelBrowser.cdp_ws_url,
+    browser_live_view_url: kernelBrowser.browser_live_view_url || "",
   };
   return NextResponse.json(instance);
 }

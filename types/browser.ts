@@ -7,4 +7,6 @@ export interface BrowserInstance {
   id: string;
   /** Chrome DevTools Protocol WebSocket URL for connecting to the browser */
   cdp_ws_url: string;
+  /** Live view URL for real-time browser interaction */
+  browser_live_view_url: string;
 }

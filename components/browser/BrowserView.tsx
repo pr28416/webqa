@@ -6,9 +6,15 @@ import { Button } from "@/components/ui/button";
 import { BrowserInstance } from "@/types/browser";
 import BrowserNavBar from "./BrowserNavBar";
 
-export default function BrowserView() {
-  const [browserInstance, setBrowserInstance] =
-    useState<BrowserInstance | null>(null);
+interface BrowserViewProps {
+  browserInstance: BrowserInstance | null;
+  onBrowserInstanceChange: (instance: BrowserInstance | null) => void;
+}
+
+export default function BrowserView({
+  browserInstance,
+  onBrowserInstanceChange,
+}: BrowserViewProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   /**
@@ -26,7 +32,7 @@ export default function BrowserView() {
       }
 
       const instance: BrowserInstance = await response.json();
-      setBrowserInstance(instance);
+      onBrowserInstanceChange(instance);
     } catch (error) {
       console.error("Error starting browser:", error);
       alert(
@@ -55,7 +61,7 @@ export default function BrowserView() {
         throw new Error(`Failed to stop browser: ${response.statusText}`);
       }
 
-      setBrowserInstance(null);
+      onBrowserInstanceChange(null);
     } catch (error) {
       console.error("Error stopping browser:", error);
       alert(
@@ -104,4 +110,3 @@ export default function BrowserView() {
     </div>
   );
 }
-

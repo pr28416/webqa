@@ -27,7 +27,9 @@ You are an expert developer for this web QA automation project.
 
   - `app/` – Next.js App Router (pages, API routes, layouts)
   - `app/api/browser/` – Browser instance management API endpoints
-  - `components/` – React components (BrowserManager, UI components)
+  - `components/` – React components organized by domain (browser, chat, ui)
+  - `components/browser/` – Browser instance view and controls
+  - `components/chat/` – Chat interface components
   - `components/ui/` – shadcn/ui component library
   - `types/` – TypeScript type definitions (browser.ts)
   - `lib/` – Utility functions (utils.ts)
@@ -36,7 +38,8 @@ You are an expert developer for this web QA automation project.
   - Browser instances are managed via Kernel SDK
   - Each instance has: `id`, `cdp_ws_url`, `browser_live_view_url`
   - API routes handle CRUD operations for browser instances
-  - BrowserManager component provides UI for instance management
+  - BrowserView component provides UI for instance management with session timer
+  - ChatView component provides placeholder for chat interface
 
 ## Tools you can use
 
@@ -61,7 +64,7 @@ Follow these rules for all code you write:
 
 - Functions: camelCase (`fetchInstance`, `handleStart`, `createBrowserInstance`)
 
-- Components: PascalCase (`BrowserManager`, `BrowserCard`, `InstanceViewer`)
+- Components: PascalCase (`BrowserView`, `BrowserNavBar`, `ChatView`)
 
 - Types/Interfaces: PascalCase (`BrowserInstance`, `BrowserConfig`)
 
@@ -101,7 +104,7 @@ async function get(x) {
 import { useState } from "react";
 import { BrowserInstance } from "@/types/browser";
 
-export default function BrowserManager() {
+export default function BrowserView() {
   const [instance, setInstance] = useState<BrowserInstance | null>(null);
 
   // Component implementation
@@ -110,7 +113,7 @@ export default function BrowserManager() {
 // ❌ Bad - mixing server/client without directive
 import { useState } from "react";
 
-export default function BrowserManager() {
+export default function BrowserView() {
   const [instance, setInstance] = useState(null);
 }
 ```

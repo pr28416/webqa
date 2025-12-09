@@ -1,20 +1,20 @@
 import { anthropic, AnthropicProviderOptions } from "@ai-sdk/anthropic";
-import { ToolLoopAgent, stepCountIs } from "ai";
+import { stepCountIs, ToolLoopAgent } from "ai";
 import { Stagehand } from "@browserbasehq/stagehand";
 import {
-  createStagehandGotoTool,
   createStagehandActTool,
+  createStagehandEvaluateTool,
   createStagehandExtractTool,
-  createStagehandObserveTool,
+  createStagehandGetTitleTool,
+  createStagehandGetUrlTool,
   createStagehandGoBackTool,
   createStagehandGoForwardTool,
+  createStagehandGotoTool,
+  createStagehandObserveTool,
   createStagehandReloadTool,
-  createStagehandWaitTool,
-  createStagehandGetUrlTool,
-  createStagehandGetTitleTool,
   createStagehandScreenshotTool,
   createStagehandSetViewportTool,
-  createStagehandEvaluateTool,
+  createStagehandWaitTool,
 } from "@/lib/tools/stagehand-tools";
 
 /**
@@ -49,7 +49,8 @@ export function createChatAgent(stagehand: Stagehand) {
   const agent = new ToolLoopAgent({
     // model: anthropic("claude-sonnet-4-5-20250929"),
     model: anthropic("claude-haiku-4-5-20251001"),
-    instructions: `You are an expert web QA and browser automation assistant with access to a live browser.
+    instructions:
+      `You are an expert web QA and browser automation assistant with access to a live browser.
 
 CORE CAPABILITIES:
 - Control a real browser using natural language through Stagehand tools
@@ -89,14 +90,18 @@ Use these for advanced scenarios, reliability, or specific workflows:
 
 - stagehandGoBack: Navigate back in history (iterative workflows)
 - stagehandReload: Refresh page (verify changes, retry after errors)
-- stagehandScreenshot: **DEBUGGING ONLY** - Visual verification when observe/extract can't help (slow, expensive)
+- stagehandScreenshot: **DEBUGGING & WHEN STUCK** - Visual verification when observe/extract can't help (slow, expensive)
 
 When to use:
   • stagehandGoBack: Scraping lists, returning to previous pages
   • stagehandReload: Verifying form submissions, checking for updates
-  • stagehandScreenshot: **ONLY when debugging visual issues, verifying image content, or when observe/extract fail**
+  • stagehandScreenshot: 
+    - When debugging visual issues or verifying image content
+    - When observe/extract fail to give you enough information
+    - **When you're stuck and unsure what's on the page** - observe may not always be enough
   
 ⚠️ Screenshot is SLOW and EXPENSIVE. Always try stagehandObserve or stagehandExtract first!
+✅ But if you're stuck or can't understand what observe is telling you, USE SCREENSHOT to debug!
 
 🔴 TIER 3 - SPECIALIZED TOOLS (Use only when necessary):
 
@@ -119,11 +124,12 @@ DECISION TREE
 
 Need to understand what's on the page?
   → **ALWAYS START WITH stagehandObserve** (Tier 1) - fast, text-based, comprehensive
-  → Only use stagehandScreenshot if debugging visual/image issues (Tier 2)
+  → If observe doesn't give enough info or you're confused, use stagehandScreenshot (Tier 2)
 
 Need to interact with the page?
   → First use stagehandObserve to find the element (Tier 1)
   → Then use stagehandAct with the discovered action (Tier 1)
+  → If the action fails, use stagehandScreenshot with context (e.g., "Screenshot - debugging why login button click failed")
 
 Need to get data from the page?
   → Use stagehandExtract (Tier 1) - reads DOM directly, no screenshot needed
@@ -140,9 +146,14 @@ Page isn't responding as expected?
   → Try stagehandReload (Tier 2)
   → Or stagehandWait if timing issue (Tier 3)
 
+Stuck or actions keep failing?
+  → Use stagehandScreenshot with debugging context (Tier 2)
+  → Include what you're trying to debug: "Screenshot - checking why form submission is not working"
+  → This helps you analyze what's actually on the page
+
 Debugging visual issues or need to verify image content?
-  → **ONLY THEN** use stagehandScreenshot (Tier 2)
-  → Example: "Is the logo displaying correctly?" or "What does the error image show?"
+  → Use stagehandScreenshot with clear context (Tier 2)
+  → Example: "Screenshot - verifying logo displays correctly" or "Screenshot - checking error image content"
 
 ═══════════════════════════════════════════════════════════════════════════════
 INTEGRATION PATTERNS
@@ -179,21 +190,31 @@ INTEGRATION PATTERNS
 BEST PRACTICES:
   ✓ Always start with stagehandGoto
   ✓ **ALWAYS use stagehandObserve before stagehandAct** - it's faster and more reliable
-  ✓ **AVOID stagehandScreenshot unless debugging visual issues** - use observe/extract instead
+  ✓ **TRY stagehandObserve first, but use stagehandScreenshot if stuck** - observe is fast but may not always be enough
   ✓ Prefer Tier 1 tools unless you have a specific reason for Tier 2/3
   ✓ Use stagehandAct with variables (%var%) for sensitive data
   ✓ Add selector to stagehandExtract for faster, more accurate extraction
   ✓ Avoid stagehandWait unless absolutely necessary (tools wait smartly)
+  ✓ **When using screenshot for debugging, include context** - explain what you're debugging in the instruction
   
 🚫 DON'T USE SCREENSHOT FOR:
-  - Finding elements (use stagehandObserve)
-  - Extracting text (use stagehandExtract)
-  - Understanding page structure (use stagehandObserve)
+  - Finding elements (use stagehandObserve first)
+  - Extracting text (use stagehandExtract first)
+  - Understanding page structure (use stagehandObserve first)
   
-✅ ONLY USE SCREENSHOT FOR:
+✅ USE SCREENSHOT WHEN:
   - Debugging visual layout issues
   - Verifying image/chart content
   - Documenting visual bugs
+  - **You're stuck and observe isn't giving you enough information**
+  - Actions are failing and you need to see what's actually on the page
+  
+⚠️ IMPORTANT: When using screenshot for debugging, include context in the instruction:
+  ❌ Bad: "Take a screenshot"
+  ✅ Good: "Take a screenshot - debugging why the login button click is failing"
+  ✅ Good: "Screenshot to see the current state after form submission failed"
+  
+This helps you analyze the screenshot with the right context!
 
 COMMUNICATION STYLE:
 - Be clear and concise
@@ -248,6 +269,5 @@ Always prioritize accuracy and best practices in your automation workflows.`,
  */
 export type ChatAgentUIMessage = ReturnType<
   typeof createChatAgent
-> extends ToolLoopAgent<infer T>
-  ? T
+> extends ToolLoopAgent<infer T> ? T
   : never;

@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { StopCircle, Clock } from "lucide-react";
+import { StopCircle, Clock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrowserInstance } from "@/types/browser";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface BrowserNavBarProps {
   browserInstance: BrowserInstance;
@@ -49,13 +54,27 @@ export default function BrowserNavBar({
   return (
     <div className="flex items-center justify-between border-b border-border bg-muted/50 px-4 py-2">
       <div className="flex items-center gap-4">
-        {/* Session ID */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Session:</span>
-          <span className="font-mono text-sm text-muted-foreground">
-            {browserInstance.id}
-          </span>
-        </div>
+        {/* Session Info Icon with Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label="Session information"
+            >
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto" align="start">
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">
+                Session ID
+              </div>
+              <div className="font-mono text-sm">{browserInstance.id}</div>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {/* Session Timer */}
         <div className="flex items-center gap-2">

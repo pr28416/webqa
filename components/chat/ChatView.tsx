@@ -5,7 +5,6 @@ import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  Send,
   User,
   Bot,
   Sparkles,
@@ -19,9 +18,9 @@ import {
   Eye,
   FileSearch,
   StopCircle,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { BrowserInstance } from "@/types/browser";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,11 +28,16 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 interface ChatViewProps {
   browserInstance: BrowserInstance | null;
+  onStartBrowser: () => Promise<void>;
+  onStopBrowser: () => Promise<void>;
+  isBrowserLoading: boolean;
 }
 
 // Helper to check if value is a record (object with string keys)
@@ -146,9 +150,15 @@ function getToolConfig(toolName: string, input?: unknown): ToolConfig {
   }
 }
 
-export default function ChatView({ browserInstance }: ChatViewProps) {
+export default function ChatView({
+  browserInstance,
+  onStartBrowser,
+  onStopBrowser,
+  isBrowserLoading,
+}: ChatViewProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [input, setInput] = useState("");
+  const [testInstructions, setTestInstructions] = useState("");
+  const [isTestRunning, setIsTestRunning] = useState(false);
 
   // Use a ref to always get the current browserInstance value
   // This prevents stale closures in prepareSendMessagesRequest
@@ -203,42 +213,99 @@ export default function ChatView({ browserInstance }: ChatViewProps) {
     }
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const trimmedInput = input.trim();
-
-    if (!trimmedInput || !browserInstance) {
+  const handleRunTest = async () => {
+    const trimmedInstructions = testInstructions.trim();
+    if (!trimmedInstructions) {
       return;
     }
 
-    sendMessage({
-      role: "user",
-      parts: [{ type: "text", text: trimmedInput }],
-    });
-    setInput("");
+    setIsTestRunning(true);
+
+    try {
+      // Start browser if not already running
+      if (!browserInstance) {
+        await onStartBrowser();
+      }
+
+      // Send test instructions as a message
+      sendMessage({
+        role: "user",
+        parts: [{ type: "text", text: trimmedInstructions }],
+      });
+    } catch (error) {
+      console.error("Error running test:", error);
+      setIsTestRunning(false);
+    }
+  };
+
+  const handleStopTest = async () => {
+    // Stop the chat if it's streaming
+    stop();
+
+    // Stop the browser instance
+    await onStopBrowser();
+
+    setIsTestRunning(false);
   };
 
   const isLoading = status === "submitted" || status === "streaming";
 
+  // Update isTestRunning when loading state changes
+  useEffect(() => {
+    if (!isLoading && isTestRunning && messages.length > 0) {
+      // Test finished running
+      setIsTestRunning(false);
+    }
+  }, [isLoading, isTestRunning, messages.length]);
+
+  // Determine test status
+  const getTestStatus = () => {
+    if (isTestRunning || isLoading) {
+      return {
+        label: "Running",
+        className: "bg-green-100 text-green-800 hover:bg-green-100",
+      };
+    }
+    if (
+      browserInstance &&
+      !isTestRunning &&
+      !isLoading &&
+      messages.length > 0
+    ) {
+      return {
+        label: "Complete",
+        className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
+      };
+    }
+    return {
+      label: "Ready",
+      className:
+        "border border-border bg-background text-foreground hover:bg-accent",
+    };
+  };
+
+  const testStatus = getTestStatus();
+
   return (
     <div className="flex h-full max-w-full flex-col overflow-hidden">
-      {/* Header - Fixed, doesn't scroll */}
-      <div className="mb-4 flex max-w-full shrink-0 items-center justify-between border-b pb-3">
-        <div>
-          <h2 className="text-sm font-medium">Browser Agent</h2>
-          <p className="text-xs text-muted-foreground">
-            Powered by Claude Sonnet 4.5
-          </p>
+      {/* Test Instructions Input - Fixed at top */}
+      <div className="mb-4 max-w-full shrink-0 space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="test-instructions" className="text-sm font-medium">
+            Test Instructions
+          </Label>
+          <Badge className={`text-xs ${testStatus.className}`}>
+            {testStatus.label}
+          </Badge>
         </div>
-        {browserInstance ? (
-          <Badge variant="secondary" className="text-xs">
-            Connected
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="text-xs">
-            No Browser
-          </Badge>
-        )}
+        <Textarea
+          id="test-instructions"
+          value={testInstructions}
+          onChange={(e) => setTestInstructions(e.target.value)}
+          placeholder="Enter test instructions for the browser agent..."
+          disabled={isTestRunning || isBrowserLoading}
+          className="min-h-[100px] resize-none text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
       </div>
 
       {/* Messages Area - Scrollable, grows to fill space */}
@@ -247,24 +314,16 @@ export default function ChatView({ browserInstance }: ChatViewProps) {
         className="min-h-0 max-w-full flex-1 overflow-y-auto overflow-x-hidden pr-4"
       >
         <div className="max-w-full space-y-6">
-          {messages.length === 0 && (
+          {messages.length === 0 && !isTestRunning && (
             <div className="max-w-full overflow-hidden text-sm text-muted-foreground">
-              {browserInstance ? (
-                <>
-                  <p>Ask the agent to interact with the browser</p>
-                  <p className="mt-1 text-xs opacity-70">
-                    Try: &quot;Navigate to example.com&quot; or &quot;Extract
-                    the page title&quot;
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p>Start a browser instance to begin</p>
-                  <p className="mt-1 text-xs opacity-70">
-                    Click the play button on the right to start a browser
-                  </p>
-                </>
-              )}
+              <p>
+                Enter test instructions above and click &quot;Run Test&quot; to
+                begin
+              </p>
+              <p className="mt-1 text-xs opacity-70">
+                The agent will execute your instructions in a new browser
+                session
+              </p>
             </div>
           )}
 
@@ -495,34 +554,31 @@ export default function ChatView({ browserInstance }: ChatViewProps) {
         </div>
       </div>
 
-      {/* Input Area - Fixed, doesn't scroll */}
-      <form
-        onSubmit={handleSubmit}
-        className="mt-4 flex max-w-full shrink-0 gap-2"
-      >
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={
-            browserInstance ? "Ask the agent..." : "Start a browser to chat..."
-          }
-          disabled={isLoading || !browserInstance}
-          className="flex-1 text-sm"
-        />
-        {isLoading ? (
-          <Button type="button" onClick={stop} variant="destructive" size="sm">
-            <StopCircle className="h-3.5 w-3.5" />
+      {/* Run/Stop Test Button - Fixed at bottom right */}
+      <div className="mt-4 flex max-w-full shrink-0 justify-end">
+        {isTestRunning || browserInstance ? (
+          <Button
+            onClick={handleStopTest}
+            disabled={isBrowserLoading}
+            variant="destructive"
+            size="lg"
+            className="gap-2"
+          >
+            <StopCircle className="h-5 w-5" />
+            Stop Test
           </Button>
         ) : (
           <Button
-            type="submit"
-            disabled={!input.trim() || !browserInstance}
-            size="sm"
+            onClick={handleRunTest}
+            disabled={!testInstructions.trim() || isBrowserLoading}
+            size="lg"
+            className="gap-2"
           >
-            <Send className="h-3.5 w-3.5" />
+            <Play className="h-5 w-5" fill="currentColor" />
+            Run Test
           </Button>
         )}
-      </form>
+      </div>
     </div>
   );
 }

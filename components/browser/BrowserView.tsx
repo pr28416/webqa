@@ -1,49 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { BrowserInstance } from "@/types/browser";
 import BrowserNavBar from "./BrowserNavBar";
 
 interface BrowserViewProps {
   browserInstance: BrowserInstance | null;
   onBrowserInstanceChange: (instance: BrowserInstance | null) => void;
+  isLoading?: boolean;
 }
 
 export default function BrowserView({
   browserInstance,
   onBrowserInstanceChange,
+  isLoading: externalIsLoading,
 }: BrowserViewProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  /**
-   * Creates a new browser instance by calling the POST /api/browser endpoint
-   */
-  async function handleStartBrowser() {
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/browser", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to start browser: ${response.statusText}`);
-      }
-
-      const instance: BrowserInstance = await response.json();
-      onBrowserInstanceChange(instance);
-    } catch (error) {
-      console.error("Error starting browser:", error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to start browser instance"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  // Use external loading state if provided, otherwise use internal state
+  const loading = externalIsLoading ?? isLoading;
 
   /**
    * Stops the current browser instance by calling DELETE /api/browser
@@ -81,7 +56,7 @@ export default function BrowserView({
         <BrowserNavBar
           browserInstance={browserInstance}
           onStop={handleStopBrowser}
-          isLoading={isLoading}
+          isLoading={loading}
         />
       )}
 
@@ -95,16 +70,13 @@ export default function BrowserView({
             title="Browser Live View"
           />
         ) : (
-          // Show play button when not running
-          <Button
-            onClick={handleStartBrowser}
-            disabled={isLoading}
-            size="lg"
-            className="h-24 w-24 rounded-full p-0"
-            variant="default"
-          >
-            <Play className="h-12 w-12" fill="currentColor" />
-          </Button>
+          // Show empty state when not running
+          <div className="text-center text-muted-foreground">
+            <p className="text-sm">No active browser session</p>
+            <p className="mt-1 text-xs opacity-70">
+              Click &quot;Run Test&quot; on the left to start
+            </p>
+          </div>
         )}
       </div>
     </div>

@@ -47,7 +47,8 @@ export function createChatAgent(stagehand: Stagehand) {
   const stagehandEvaluateTool = createStagehandEvaluateTool(stagehand);
 
   const agent = new ToolLoopAgent({
-    model: anthropic("claude-sonnet-4-5-20250929"),
+    // model: anthropic("claude-sonnet-4-5-20250929"),
+    model: anthropic("claude-haiku-4-5-20251001"),
     instructions: `You are an expert web QA and browser automation assistant with access to a live browser.
 
 CORE CAPABILITIES:

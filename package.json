@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "3.0.0-beta.76",
+    "@ai-sdk/google": "3.0.0-beta.66",
     "@ai-sdk/react": "3.0.0-beta.140",
     "@browserbasehq/stagehand": "^3.0.5",
     "@hookform/resolvers": "^5.2.2",

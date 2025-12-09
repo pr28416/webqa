@@ -5,25 +5,26 @@ import { Stagehand } from "@browserbasehq/stagehand";
  *
  * @param cdpUrl - Chrome DevTools Protocol WebSocket URL from Kernel browser
  * @returns Initialized Stagehand instance
- * @throws Error if OPENAI_API_KEY environment variable is not set
+ * @throws Error if GEMINI_API_KEY environment variable is not set
  * @throws Error if Stagehand initialization fails
  */
 export async function createStagehandInstance(cdpUrl: string) {
   // Validate environment variables
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  if (!openaiApiKey) {
-    throw new Error("OPENAI_API_KEY environment variable is required");
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is required");
   }
 
   try {
-    // Configure Stagehand to use the existing Kernel browser
+    // Configure Stagehand to use the existing Kernel browser with Gemini
+    // Gemini 2.5 Flash is fast and cost-effective for act/extract/observe operations
     const stagehand = new Stagehand({
       env: "LOCAL",
       localBrowserLaunchOptions: {
         cdpUrl,
       },
-      model: "openai/gpt-4o-mini",
-      apiKey: openaiApiKey,
+      model: "google/gemini-2.5-flash-lite",
+      apiKey: geminiApiKey,
       verbose: 0,
       disablePino: true, // Disable pino logger to prevent thread-stream worker errors
       domSettleTimeout: 30_000,

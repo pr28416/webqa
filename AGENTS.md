@@ -1276,7 +1276,7 @@ const agent = stagehand.agent({
   cua: true,
   model: {
     modelName: "google/gemini-2.5-computer-use-preview-10-2025",
-    apiKey: process.env.GEMINI_API_KEY,
+    apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   },
   systemPrompt: `You are a helpful assistant.`,
 });

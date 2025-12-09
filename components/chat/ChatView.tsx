@@ -18,6 +18,7 @@ import {
   MousePointerClick,
   Eye,
   FileSearch,
+  StopCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,12 +176,13 @@ export default function ChatView({ browserInstance }: ChatViewProps) {
           ...body,
           browserId: currentBrowserId,
         };
+        console.log("Messages:", messages);
         return { body: requestBody };
       },
     });
   }, []); // Empty dependency array - transport created only once
 
-  const { messages, sendMessage, status, error, setMessages } = useChat({
+  const { messages, sendMessage, status, error, setMessages, stop } = useChat({
     transport,
   });
 
@@ -323,13 +325,21 @@ export default function ChatView({ browserInstance }: ChatViewProps) {
                       const isLoading =
                         toolPart.state === "input-streaming" ||
                         toolPart.state === "input-available";
+
+                      // Check if output has success: false
+                      const hasSuccessFalse =
+                        isRecord(toolPart.output) &&
+                        toolPart.output.success === false;
+
                       const isComplete =
                         toolPart.state === "output-available" &&
-                        !toolPart.errorText;
+                        !toolPart.errorText &&
+                        !hasSuccessFalse;
                       const hasError =
                         !!toolPart.errorText ||
                         toolPart.state === "output-error" ||
-                        toolPart.state === "output-denied";
+                        toolPart.state === "output-denied" ||
+                        hasSuccessFalse;
 
                       // Get tool-specific configuration
                       const toolConfig = getToolConfig(
@@ -493,13 +503,19 @@ export default function ChatView({ browserInstance }: ChatViewProps) {
           disabled={isLoading || !browserInstance}
           className="flex-1 text-sm"
         />
-        <Button
-          type="submit"
-          disabled={isLoading || !input.trim() || !browserInstance}
-          size="sm"
-        >
-          <Send className="h-3.5 w-3.5" />
-        </Button>
+        {isLoading ? (
+          <Button type="button" onClick={stop} variant="destructive" size="sm">
+            <StopCircle className="h-3.5 w-3.5" />
+          </Button>
+        ) : (
+          <Button
+            type="submit"
+            disabled={!input.trim() || !browserInstance}
+            size="sm"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </form>
     </div>
   );

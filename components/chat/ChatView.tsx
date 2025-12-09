@@ -29,6 +29,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatViewProps {
   browserInstance: BrowserInstance | null;
@@ -291,9 +293,11 @@ export default function ChatView({ browserInstance }: ChatViewProps) {
                     return (
                       <div
                         key={index}
-                        className="max-w-full overflow-hidden whitespace-pre-wrap wrap-break-word"
+                        className="prose prose-sm max-w-full dark:prose-invert"
                       >
-                        {part.text}
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {part.text}
+                        </ReactMarkdown>
                       </div>
                     );
                   }
@@ -309,8 +313,10 @@ export default function ChatView({ browserInstance }: ChatViewProps) {
                           <Sparkles className="h-3 w-3" />
                           Thinking
                         </div>
-                        <div className="max-w-full overflow-hidden text-xs italic text-muted-foreground wrap-break-word">
-                          {part.text}
+                        <div className="prose prose-xs max-w-full italic text-muted-foreground dark:prose-invert">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {part.text}
+                          </ReactMarkdown>
                         </div>
                       </div>
                     );

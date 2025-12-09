@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -118,5 +119,67 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Tighter spacing for markdown in chat */
+  .prose {
+    @apply leading-normal;
+  }
+
+  .prose :where(p):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    @apply my-1;
+  }
+
+  .prose
+    :where(p):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    ):first-child {
+    @apply mt-0;
+  }
+
+  .prose
+    :where(p):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    ):last-child {
+    @apply mb-0;
+  }
+
+  .prose
+    :where(ul, ol):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    @apply my-1;
+  }
+
+  .prose :where(li):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    @apply my-0.5;
+  }
+
+  .prose
+    :where(h1, h2, h3, h4, h5, h6):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    ) {
+    @apply mt-2 mb-1 leading-tight;
+  }
+
+  .prose
+    :where(h1, h2, h3, h4, h5, h6):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    ):first-child {
+    @apply mt-0;
+  }
+
+  .prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    @apply my-1;
+  }
+
+  .prose
+    :where(blockquote):not(
+      :where([class~="not-prose"], [class~="not-prose"] *)
+    ) {
+    @apply my-1;
+  }
+
+  .prose
+    :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    @apply px-1 py-0.5 rounded bg-muted;
   }
 }

@@ -23,7 +23,7 @@ export type NewInteractionEvent = typeof interactionEvents.$inferInsert;
 /**
  * Valid status values for an interaction
  */
-export type InteractionStatus = "running" | "passed" | "failed" | "error";
+export type InteractionStatus = "running" | "passed" | "failed" | "error" | "canceled";
 
 /**
  * Event family classification for grouping similar events

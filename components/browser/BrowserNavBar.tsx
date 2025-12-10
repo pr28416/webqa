@@ -52,7 +52,7 @@ export default function BrowserNavBar({
   }, []);
 
   return (
-    <div className="flex items-center justify-between border-b border-border bg-muted/50 px-4 py-2">
+    <div className="flex items-center justify-between border-b border-border/60 bg-muted/30 px-4 py-2">
       <div className="flex items-center gap-4">
         {/* Session Info Icon with Popover */}
         <Popover>
@@ -60,7 +60,7 @@ export default function BrowserNavBar({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               aria-label="Session information"
             >
               <Info className="h-4 w-4 text-muted-foreground" />
@@ -68,18 +68,18 @@ export default function BrowserNavBar({
           </PopoverTrigger>
           <PopoverContent className="w-auto" align="start">
             <div className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Session ID
               </div>
-              <div className="font-mono text-sm">{browserInstance.id}</div>
+              <div className="font-mono text-xs">{browserInstance.id}</div>
             </div>
           </PopoverContent>
         </Popover>
 
         {/* Session Timer */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="font-mono text-sm text-muted-foreground">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formatSessionTime(sessionTime)}
           </span>
         </div>
@@ -91,9 +91,9 @@ export default function BrowserNavBar({
         disabled={isLoading}
         variant="destructive"
         size="sm"
-        className="gap-2"
+        className="h-7 gap-1.5 text-xs"
       >
-        <StopCircle className="h-4 w-4" />
+        <StopCircle className="h-3.5 w-3.5" />
         Stop
       </Button>
     </div>

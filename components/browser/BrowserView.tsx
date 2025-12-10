@@ -3,17 +3,23 @@
 import { useState } from "react";
 import { BrowserInstance } from "@/types/browser";
 import BrowserNavBar from "./BrowserNavBar";
+import { Monitor, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface BrowserViewProps {
   browserInstance: BrowserInstance | null;
   onBrowserInstanceChange: (instance: BrowserInstance | null) => void;
   isLoading?: boolean;
+  onRunTest?: () => void;
+  onStopAgent?: () => void;
 }
 
 export default function BrowserView({
   browserInstance,
   onBrowserInstanceChange,
   isLoading: externalIsLoading,
+  onRunTest,
+  onStopAgent,
 }: BrowserViewProps) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,11 +27,20 @@ export default function BrowserView({
   const loading = externalIsLoading ?? isLoading;
 
   /**
-   * Stops the current browser instance by calling DELETE /api/browser
+   * Stops the current browser instance and agent by calling DELETE /api/browser
+   * and stopping the agent if onStopAgent is provided
    */
   async function handleStopBrowser() {
     if (!browserInstance) return;
 
+    // Stop the agent first if callback is provided
+    // The agent's stop handler will take care of stopping the browser
+    if (onStopAgent) {
+      onStopAgent();
+      return;
+    }
+
+    // Only delete browser directly if there's no agent
     setIsLoading(true);
     try {
       const response = await fetch(`/api/browser?id=${browserInstance.id}`, {
@@ -61,7 +76,7 @@ export default function BrowserView({
       )}
 
       {/* Browser Content Area */}
-      <div className="relative flex flex-1 items-center justify-center">
+      <div className="relative flex flex-1 items-center justify-center bg-background">
         {browserInstance ? (
           // Show browser live view when running
           <iframe
@@ -71,11 +86,29 @@ export default function BrowserView({
           />
         ) : (
           // Show empty state when not running
-          <div className="text-center text-muted-foreground">
-            <p className="text-sm">No active browser session</p>
-            <p className="mt-1 text-xs opacity-70">
-              Click &quot;Run Test&quot; on the left to start
+          <div className="text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Monitor className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="mt-4 text-sm font-medium text-foreground">
+              No active browser session
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {onRunTest
+                ? "Click the button below to start testing"
+                : "Start a test to view the browser"}
+            </p>
+            {onRunTest && (
+              <Button
+                size="sm"
+                onClick={onRunTest}
+                disabled={loading}
+                className="gap-2 mt-4"
+              >
+                <Play className="h-4 w-4" />
+                Run Test
+              </Button>
+            )}
           </div>
         )}
       </div>

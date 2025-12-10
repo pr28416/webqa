@@ -23,7 +23,7 @@ import { and, eq, sql } from "drizzle-orm";
  */
 export async function POST(request: NextRequest) {
   try {
-    const { messages, browserId } = await request.json();
+    const { messages, browserId, testId } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
           .values({
             userPrompt,
             status: "running",
+            testId: testId || null,
             metadata: {
               browserId,
             } satisfies InteractionMetadata,
@@ -143,23 +144,7 @@ export async function POST(request: NextRequest) {
     let seq = 0;
     let hasError = false;
 
-    // State tracking for merging deltas
-    const streamAccumulators = new Map<string, {
-      role: "system" | "user" | "assistant" | "tool";
-      eventFamily:
-        | "lifecycle"
-        | "text"
-        | "reasoning"
-        | "tool-input"
-        | "tool-output"
-        | "data"
-        | "error";
-      eventType: string;
-      accumulatedText: string;
-      startPayload: Record<string, unknown>;
-    }>();
-
-    // Create a TransformStream to intercept and log all chunks
+    // Create a TransformStream to intercept and save all chunks
     const loggingStream = new TransformStream({
       async transform(chunk, controller) {
         try {
@@ -186,86 +171,23 @@ export async function POST(request: NextRequest) {
                   const { eventType, eventFamily, streamId, role, payload } =
                     normalized;
 
-                  // Determine if this is a delta-based event family
-                  const isDeltaFamily = eventFamily === "text" ||
-                    eventFamily === "reasoning" ||
-                    eventFamily === "tool-input";
-
-                  // Handle delta merging for text, reasoning, and tool-input
-                  if (eventType.endsWith("-start") && isDeltaFamily) {
-                    // Start accumulating
-                    if (streamId) {
-                      streamAccumulators.set(streamId, {
-                        role,
-                        eventFamily,
-                        eventType: eventFamily, // Store as "text", "reasoning", or "tool-input" (not "text-start")
-                        accumulatedText: "",
-                        startPayload: payload,
-                      });
-                    }
-                  } else if (eventType.endsWith("-delta") && isDeltaFamily) {
-                    // Accumulate delta
-                    if (streamId && streamAccumulators.has(streamId)) {
-                      const accumulator = streamAccumulators.get(streamId)!;
-                      const delta = typeof payload.delta === "string"
-                        ? payload.delta
-                        : typeof payload.text === "string"
-                        ? payload.text
-                        : "";
-                      accumulator.accumulatedText += delta;
-                    }
-                  } else if (
-                    (eventType.endsWith("-end") ||
-                      eventType.endsWith("-available")) &&
-                    isDeltaFamily
-                  ) {
-                    // Write final merged event
-                    // Note: tool-input uses "available" instead of "end"
-                    if (streamId && streamAccumulators.has(streamId)) {
-                      const accumulator = streamAccumulators.get(streamId)!;
-
-                      db.insert(interactionEvents)
-                        .values({
-                          interactionId: interaction.interactionId,
-                          seq: seq++,
-                          role: accumulator.role,
-                          eventFamily: accumulator.eventFamily,
-                          eventType: accumulator.eventType,
-                          payload: {
-                            ...accumulator.startPayload,
-                            text: accumulator.accumulatedText,
-                          },
-                          streamId,
-                        })
-                        .catch((error) => {
-                          console.error(
-                            "[Test Execution] Failed to save event:",
-                            error,
-                          );
-                        });
-
-                      // Clean up accumulator
-                      streamAccumulators.delete(streamId);
-                    }
-                  } else {
-                    // For non-delta events (lifecycle, tool-output, data, error, source, file, etc), store immediately
-                    db.insert(interactionEvents)
-                      .values({
-                        interactionId: interaction.interactionId,
-                        seq: seq++,
-                        role,
-                        eventFamily,
-                        eventType,
-                        payload,
-                        streamId,
-                      })
-                      .catch((error) => {
-                        console.error(
-                          "[Test Execution] Failed to save event:",
-                          error,
-                        );
-                      });
-                  }
+                  // Save every event exactly as it comes in
+                  db.insert(interactionEvents)
+                    .values({
+                      interactionId: interaction.interactionId,
+                      seq: seq++,
+                      role,
+                      eventFamily,
+                      eventType,
+                      payload,
+                      streamId,
+                    })
+                    .catch((error) => {
+                      console.error(
+                        "[Test Execution] Failed to save event:",
+                        error,
+                      );
+                    });
 
                   // Check for finish or error events
                   if (eventType === "finish") {

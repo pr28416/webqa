@@ -32,6 +32,6 @@ export interface ExecutionsResponse extends PaginationMeta {
  */
 export interface TestExecutionRequest {
   messages: UIMessage<unknown, UIDataTypes, UITools>[];
-  browserId?: string;
-  testId: string | null;
+  browserId: string;
+  testId: string;
 }

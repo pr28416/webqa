@@ -314,6 +314,16 @@ const ChatView = forwardRef<ChatViewRef, ChatViewProps>(
       }
     }, [messages]);
 
+    // Track if we've already stopped the browser to prevent duplicate stops
+    const hasAutoStoppedRef = useRef(false);
+
+    // Reset auto-stop flag when a new test starts running
+    useEffect(() => {
+      if (isTestRunning) {
+        hasAutoStoppedRef.current = false;
+      }
+    }, [isTestRunning]);
+
     const handleRunTest = async () => {
       const trimmedInstructions = testInstructions.trim();
       if (!trimmedInstructions) {
@@ -344,6 +354,13 @@ const ChatView = forwardRef<ChatViewRef, ChatViewProps>(
     };
 
     const handleStopTest = async () => {
+      // Prevent duplicate stop calls (manual + auto-stop effect)
+      if (hasAutoStoppedRef.current) {
+        console.log("Browser already stopped, skipping");
+        return;
+      }
+      hasAutoStoppedRef.current = true;
+
       // Stop the chat if it's streaming
       stop();
 
@@ -377,9 +394,6 @@ const ChatView = forwardRef<ChatViewRef, ChatViewProps>(
 
     const isLoading = status === "submitted" || status === "streaming";
 
-    // Track if we've already auto-stopped to prevent multiple calls
-    const hasAutoStoppedRef = useRef(false);
-
     // Update isTestRunning when loading state changes and auto-stop browser
     useEffect(() => {
       if (!isLoading && isTestRunning && messages.length > 0) {
@@ -406,13 +420,6 @@ const ChatView = forwardRef<ChatViewRef, ChatViewProps>(
       readOnly,
       onStopBrowser,
     ]);
-
-    // Reset auto-stop flag when a new test starts
-    useEffect(() => {
-      if (isTestRunning) {
-        hasAutoStoppedRef.current = false;
-      }
-    }, [isTestRunning]);
 
     // Determine test status
     const getTestStatus = () => {

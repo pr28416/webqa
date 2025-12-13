@@ -29,42 +29,32 @@ import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 export default function TestDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const urlTestId = params.id as string;
-  const isNewTest = urlTestId === "new";
-
-  // Generate a UUID for new tests that will be used consistently
-  const [newTestId] = useState(() => (isNewTest ? crypto.randomUUID() : null));
-  const testId = isNewTest ? newTestId! : urlTestId;
+  const testId = params.id as string;
 
   const [test, setTest] = useState<Test | null>(null);
-  const [isLoading, setIsLoading] = useState(!isNewTest);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [browserInstance, setBrowserInstance] =
     useState<BrowserInstance | null>(null);
   const [isBrowserLoading, setIsBrowserLoading] = useState(false);
+  const [isDeletingBrowser, setIsDeletingBrowser] = useState(false);
 
   // Temporary state for unsaved changes
   const [editedTest, setEditedTest] = useState<Partial<Test>>({
     title: "",
     instructions: "",
   });
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(isNewTest);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Title editing state
-  const [isEditingTitle, setIsEditingTitle] = useState(isNewTest);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   // Ref to ChatView for triggering runTest
   const chatViewRef = useRef<ChatViewRef>(null);
 
   useEffect(() => {
-    if (isNewTest) {
-      // For new tests, initialize with empty state
-      setIsLoading(false);
-      return;
-    }
-
     async function fetchTest() {
       try {
         const response = await fetch(`/api/tests/${testId}`);
@@ -90,7 +80,7 @@ export default function TestDetailPage() {
     }
 
     fetchTest();
-  }, [testId, isNewTest]);
+  }, [testId]);
 
   // Warn before leaving page with unsaved changes
   useEffect(() => {
@@ -107,6 +97,7 @@ export default function TestDetailPage() {
 
   async function handleStartBrowser() {
     setIsBrowserLoading(true);
+    setIsDeletingBrowser(false); // Reset deletion flag when starting new browser
     try {
       const response = await fetch("/api/browser", {
         method: "POST",
@@ -134,6 +125,13 @@ export default function TestDetailPage() {
   async function handleStopBrowser() {
     if (!browserInstance) return;
 
+    // Prevent duplicate deletion attempts
+    if (isDeletingBrowser) {
+      console.log("Browser deletion already in progress, skipping");
+      return;
+    }
+
+    setIsDeletingBrowser(true);
     setIsBrowserLoading(true);
     try {
       const response = await fetch(`/api/browser?id=${browserInstance.id}`, {
@@ -141,6 +139,12 @@ export default function TestDetailPage() {
       });
 
       if (!response.ok) {
+        // If browser is already deleted (404), just clear the state
+        if (response.status === 404) {
+          console.log("Browser already deleted");
+          setBrowserInstance(null);
+          return;
+        }
         throw new Error(`Failed to stop browser: ${response.statusText}`);
       }
 
@@ -154,6 +158,7 @@ export default function TestDetailPage() {
       );
     } finally {
       setIsBrowserLoading(false);
+      setIsDeletingBrowser(false);
     }
   }
 
@@ -176,10 +181,8 @@ export default function TestDetailPage() {
       return;
     }
 
-    // Only auto-save title for existing tests, not new ones
-    if (!isNewTest) {
-      await handleSaveChanges();
-    }
+    // Auto-save title changes
+    await handleSaveChanges();
     setIsEditingTitle(false);
   }
 
@@ -196,52 +199,29 @@ export default function TestDetailPage() {
 
     setIsSaving(true);
     try {
-      if (isNewTest) {
-        // Create new test with pre-generated UUID
-        const response = await fetch("/api/tests", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            testId: testId, // Use the pre-generated UUID
-            title: editedTest.title,
-            instructions: editedTest.instructions,
-          }),
-        });
+      // Update existing test
+      const response = await fetch(`/api/tests/${testId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: editedTest.title,
+          instructions: editedTest.instructions,
+        }),
+      });
 
-        if (!response.ok) {
-          throw new Error(`Failed to create test: ${response.statusText}`);
-        }
-
-        const newTest: Test = await response.json();
-        // Redirect to the new test's detail page
-        router.push(`/tests/${newTest.testId}`);
-      } else {
-        // Update existing test
-        const response = await fetch(`/api/tests/${testId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: editedTest.title,
-            instructions: editedTest.instructions,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to update test: ${response.statusText}`);
-        }
-
-        const updatedTest: Test = await response.json();
-        setTest(updatedTest);
-        setEditedTest({
-          title: updatedTest.title,
-          instructions: updatedTest.instructions,
-        });
-        setHasUnsavedChanges(false);
+      if (!response.ok) {
+        throw new Error(`Failed to update test: ${response.statusText}`);
       }
+
+      const updatedTest: Test = await response.json();
+      setTest(updatedTest);
+      setEditedTest({
+        title: updatedTest.title,
+        instructions: updatedTest.instructions,
+      });
+      setHasUnsavedChanges(false);
     } catch (err) {
       console.error("Error saving test:", err);
       alert(err instanceof Error ? err.message : "Failed to save test");
@@ -273,7 +253,7 @@ export default function TestDetailPage() {
     );
   }
 
-  if (isLoading && !isNewTest) {
+  if (isLoading) {
     return (
       <SidebarInset>
         <header className="flex items-start justify-between px-6 pt-6 pb-4">
@@ -317,33 +297,21 @@ export default function TestDetailPage() {
                   Tests
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              {isNewTest && (
-                <>
-                  <BreadcrumbSeparator>
-                    <ChevronRight className="h-3 w-3" />
-                  </BreadcrumbSeparator>
-                  <BreadcrumbItem>
-                    <span className="text-xs text-muted-foreground">New</span>
-                  </BreadcrumbItem>
-                </>
-              )}
             </BreadcrumbList>
           </Breadcrumb>
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          {!isNewTest && (
-            <Button
-              variant="outline"
-              size="default"
-              onClick={() => router.push(`/executions?testId=${testId}`)}
-              className="gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              View Executions
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="default"
+            onClick={() => router.push(`/executions?testId=${testId}`)}
+            className="gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            View Executions
+          </Button>
 
           <Button
             size="default"
@@ -353,10 +321,10 @@ export default function TestDetailPage() {
               !editedTest.instructions?.trim() ||
               isSaving ||
               isBrowserLoading ||
-              (!isNewTest && !hasUnsavedChanges)
+              !hasUnsavedChanges
             }
           >
-            {isSaving ? "Saving..." : isNewTest ? "Save Test" : "Save"}
+            {isSaving ? "Saving..." : "Save"}
           </Button>
         </div>
       </header>
@@ -383,20 +351,18 @@ export default function TestDetailPage() {
               }}
               className="text-2xl font-semibold tracking-tight h-auto px-2 py-1 wrap-break-word max-w-full"
               autoFocus
-              placeholder={isNewTest ? "Enter test title..." : ""}
+              placeholder="Enter test title..."
             />
           ) : (
             <h1
               className="text-2xl font-semibold tracking-tight cursor-pointer hover:text-foreground/80 transition-colors truncate min-w-0"
               onClick={() => setIsEditingTitle(true)}
             >
-              {editedTest.title ||
-                test?.title ||
-                (isNewTest ? "New Test" : "Untitled Test")}
+              {editedTest.title || test?.title || "Untitled Test"}
             </h1>
           )}
           {/* Metadata */}
-          {!isNewTest && test && (
+          {test && (
             <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1 shrink-0">
               <span>
                 Created{" "}
@@ -415,13 +381,6 @@ export default function TestDetailPage() {
                   • Unsaved
                 </span>
               )}
-            </div>
-          )}
-          {isNewTest && hasUnsavedChanges && (
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1 shrink-0">
-              <span className="text-xs text-amber-600 font-medium">
-                • Unsaved
-              </span>
             </div>
           )}
         </div>

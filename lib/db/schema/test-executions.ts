@@ -23,8 +23,9 @@ export const tests = pgTable(
     testId: uuid("test_id").defaultRandom().primaryKey(),
 
     // Test definition
-    title: text("title").notNull(),
-    instructions: text("instructions").notNull(),
+    // Nullable to support draft tests that are created but not yet fully configured
+    title: text("title").default("Untitled Test"),
+    instructions: text("instructions").default(""),
 
     // Metadata
     createdAt: timestamp("created_at", { withTimezone: true }).notNull()

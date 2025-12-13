@@ -41,23 +41,24 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/tests
- * Creates a new test
+ * Creates a new test (can be a draft with defaults)
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { testId, title, instructions, metadata = {} } = body;
 
-    if (!title || typeof title !== "string") {
+    // Validate types if provided
+    if (title !== undefined && typeof title !== "string") {
       return NextResponse.json(
-        { error: "Title is required and must be a string" },
+        { error: "Title must be a string" },
         { status: 400 },
       );
     }
 
-    if (!instructions || typeof instructions !== "string") {
+    if (instructions !== undefined && typeof instructions !== "string") {
       return NextResponse.json(
-        { error: "Instructions are required and must be a string" },
+        { error: "Instructions must be a string" },
         { status: 400 },
       );
     }
@@ -70,16 +71,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the test with optional custom testId
+    // Title and instructions are optional (will use defaults from schema)
     const values: typeof tests.$inferInsert = {
-      title,
-      instructions,
       metadata,
       updatedAt: new Date(),
     };
 
-    // If testId is provided, use it; otherwise let the DB generate one
+    // Add optional fields if provided
     if (testId) {
       values.testId = testId;
+    }
+    if (title !== undefined) {
+      values.title = title;
+    }
+    if (instructions !== undefined) {
+      values.instructions = instructions;
     }
 
     const [newTest] = await db

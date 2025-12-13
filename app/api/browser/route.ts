@@ -65,7 +65,27 @@ export async function DELETE(request: NextRequest) {
       { status: 400 }
     );
   }
-  // Delete browser instance from Kernel API
-  await kernel.browsers.deleteByID(id);
-  return NextResponse.json({});
+  
+  try {
+    // Delete browser instance from Kernel API
+    await kernel.browsers.deleteByID(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    // If browser is already deleted (404), return success
+    // This prevents errors when multiple delete attempts occur
+    if (error && typeof error === "object" && "status" in error) {
+      const status = (error as { status: number }).status;
+      if (status === 404) {
+        console.log(`Browser ${id} already deleted or not found`);
+        return NextResponse.json({ success: true, message: "Browser already deleted" });
+      }
+    }
+    
+    // For other errors, log and return error response
+    console.error("Error deleting browser:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to delete browser" },
+      { status: 500 }
+    );
+  }
 }

@@ -36,7 +36,7 @@ import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { convertEventsToMessages } from "@/lib/executions/event-to-message";
 
 interface ExecutionDetailResponse {
-  interaction: Interaction;
+  interaction: Interaction & { title: string | null };
   events: InteractionEvent[];
 }
 
@@ -45,7 +45,9 @@ export default function ExecutionDetailPage() {
   const router = useRouter();
   const executionId = params.id as string;
 
-  const [interaction, setInteraction] = useState<Interaction | null>(null);
+  const [interaction, setInteraction] = useState<
+    (Interaction & { title: string | null }) | null
+  >(null);
   const [events, setEvents] = useState<InteractionEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

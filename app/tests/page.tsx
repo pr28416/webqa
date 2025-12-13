@@ -24,6 +24,7 @@ export default function TestsPage() {
   const [tests, setTests] = useState<Test[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingTest, setIsCreatingTest] = useState(false);
 
   useEffect(() => {
     async function fetchTests() {
@@ -46,6 +47,32 @@ export default function TestsPage() {
 
     fetchTests();
   }, []);
+
+  async function handleCreateNewTest() {
+    setIsCreatingTest(true);
+    try {
+      // Create a draft test in the database first
+      const response = await fetch("/api/tests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}), // Create with defaults
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create test: ${response.statusText}`);
+      }
+
+      const newTest: Test = await response.json();
+      // Navigate to the newly created test
+      router.push(`/tests/${newTest.testId}`);
+    } catch (err) {
+      console.error("Error creating test:", err);
+      alert(err instanceof Error ? err.message : "Failed to create test");
+      setIsCreatingTest(false);
+    }
+  }
 
   if (error) {
     return (
@@ -89,9 +116,13 @@ export default function TestsPage() {
         </div>
         {/* Action Buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          <Button onClick={() => router.push("/tests/new")} className="gap-2">
+          <Button 
+            onClick={handleCreateNewTest} 
+            className="gap-2"
+            disabled={isCreatingTest}
+          >
             <Plus className="h-4 w-4" />
-            New test
+            {isCreatingTest ? "Creating..." : "New test"}
           </Button>
         </div>
       </header>
@@ -123,8 +154,8 @@ export default function TestsPage() {
             icon={FileText}
             title="No tests yet"
             description="Get started by creating your first test. Tests are reusable definitions that can be executed multiple times."
-            actionLabel="Create your first test"
-            onAction={() => router.push("/tests/new")}
+            actionLabel={isCreatingTest ? "Creating..." : "Create your first test"}
+            onAction={handleCreateNewTest}
           />
         ) : (
           <DataTable

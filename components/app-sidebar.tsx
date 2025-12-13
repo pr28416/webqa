@@ -49,7 +49,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg">
-              <div className="flex aspect-square size-6 items-center justify-center rounded-lg bg-secondary text-sidebar-primary-foreground">
+              <div className="flex aspect-square size-6 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <Building2 className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">

@@ -1,6 +1,6 @@
 import { UIDataTypes, UIMessage, UITools } from "ai";
 import { Test } from "./test";
-import { Interaction } from "./test-execution";
+import { Interaction, InteractionEvent } from "./test-execution";
 
 /**
  * Common pagination metadata for API responses
@@ -34,4 +34,14 @@ export interface TestExecutionRequest {
   messages: UIMessage<unknown, UIDataTypes, UITools>[];
   browserId: string;
   testId: string;
+}
+
+/**
+ * Response type for GET /api/executions/[id]
+ * Returns a single execution (interaction) with its events and test title
+ */
+export interface ExecutionDetailResponse {
+  interaction: Interaction;
+  events: InteractionEvent[];
+  title: string | null;
 }

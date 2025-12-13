@@ -1,7 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, UIDataTypes, UIMessage, UITools } from "ai";
 import {
   useEffect,
   useMemo,
@@ -55,15 +55,7 @@ interface ChatViewProps {
   hideRunButton?: boolean;
   readOnly?: boolean;
   testId?: string;
-  initialMessages?: Array<{
-    id: string;
-    role: "user" | "assistant";
-    parts: Array<{
-      type: string;
-      text?: string;
-      [key: string]: unknown;
-    }>;
-  }>;
+  initialMessages?: UIMessage<unknown, UIDataTypes, UITools>[];
 }
 
 export interface ChatViewRef {
@@ -244,10 +236,19 @@ const ChatView = forwardRef<ChatViewRef, ChatViewProps>(
         prepareSendMessagesRequest: ({ messages }) => {
           const currentBrowserId = browserInstanceRef.current?.id;
           const currentTestId = testIdRef.current;
+
+          if (!currentBrowserId) {
+            throw new Error("Browser instance is required to send messages");
+          }
+
+          if (!currentTestId) {
+            throw new Error("Test ID is required to send messages");
+          }
+
           const requestBody: TestExecutionRequest = {
             messages,
             browserId: currentBrowserId,
-            testId: currentTestId ?? null,
+            testId: currentTestId,
           };
           console.log("Messages:", messages);
           return { body: requestBody };
@@ -269,33 +270,8 @@ const ChatView = forwardRef<ChatViewRef, ChatViewProps>(
         initialMessages.length > 0 &&
         messages.length === 0
       ) {
-        // Convert our message format to AI SDK format
-        const aiSdkMessages = initialMessages.map((msg) => ({
-          id: msg.id,
-          role: msg.role,
-          parts: msg.parts.map((part) => {
-            if (part.type === "text") {
-              return { type: "text" as const, text: part.text || "" };
-            }
-            if (part.type === "reasoning") {
-              return { type: "reasoning" as const, text: part.text || "" };
-            }
-            // For tool parts, we need to reconstruct the proper format
-            if (part.type.startsWith("tool-")) {
-              const toolName = part.type.replace("tool-", "");
-              return {
-                type: `tool-${toolName}` as const,
-                toolCallId: (part.toolCallId as string) || part.type,
-                state: (part.state as string) || "output-available",
-                input: part.input,
-                output: part.output,
-                errorText: part.errorText as string | undefined,
-              };
-            }
-            return part;
-          }),
-        }));
-        setMessages(aiSdkMessages as typeof messages);
+        // initialMessages are already in AI SDK UIMessage format
+        setMessages(initialMessages);
       }
     }, [readOnly, initialMessages, setMessages, messages.length]);
 

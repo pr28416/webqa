@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { asc, eq } from "drizzle-orm";
+import { ExecutionDetailResponse } from "@/types/api";
 
 interface RouteContext {
   params: Promise<{
@@ -47,12 +48,6 @@ export async function GET(
       );
     }
 
-    // Include test title in interaction object
-    const interaction = {
-      ...result.interaction,
-      title: result.testTitle,
-    };
-
     // Fetch all events for this interaction, ordered by sequence
     const events = await db
       .select()
@@ -60,9 +55,10 @@ export async function GET(
       .where(eq(schema.interactionEvents.interactionId, id))
       .orderBy(asc(schema.interactionEvents.seq));
 
-    return NextResponse.json({
-      interaction,
+    return NextResponse.json<ExecutionDetailResponse>({
+      interaction: result.interaction,
       events,
+      title: result.testTitle,
     });
   } catch (error) {
     console.error("Error fetching test execution:", error);

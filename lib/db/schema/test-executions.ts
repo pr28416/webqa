@@ -10,6 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { InteractionMetadata } from "@/types/test-execution";
 
 /**
  * Tests Table
@@ -68,7 +69,13 @@ export const interactions = pgTable(
 
     // Summary and metadata
     assistantSummary: text("assistant_summary"),
-    metadata: jsonb("metadata").notNull().default({}),
+    // Metadata column stores InteractionMetadata JSONB
+    // Always use validateInteractionMetadata() when writing and parseInteractionMetadata() when reading
+    // See lib/db/metadata-helpers.ts for validation helpers
+    metadata: jsonb("metadata")
+      .$type<InteractionMetadata>()
+      .notNull()
+      .default({}),
   },
   (table) => ({
     startedAtIdx: index("interactions_started_at_idx").on(

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   interactionEvents,
   interactions,
@@ -51,13 +52,19 @@ export type EventFamily =
 export type EventRole = "system" | "user" | "assistant" | "tool";
 
 /**
- * Metadata that can be stored with an interaction
+ * Zod schema for interaction metadata
+ * This is the source of truth for metadata validation
  */
-export interface InteractionMetadata {
-  browserId?: string;
-  repo?: string;
-  commit?: string;
-  branch?: string;
-  environment?: string;
-  [key: string]: unknown;
-}
+export const interactionMetadataSchema = z.object({
+  browserId: z.string().optional(),
+  repo: z.string().optional(),
+  commit: z.string().optional(),
+  branch: z.string().optional(),
+  environment: z.string().optional(),
+}).catchall(z.unknown()); // Allow additional properties but validate known ones
+
+/**
+ * TypeScript type derived from Zod schema
+ * This ensures type safety matches runtime validation
+ */
+export type InteractionMetadata = z.infer<typeof interactionMetadataSchema>;

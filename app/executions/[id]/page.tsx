@@ -6,6 +6,7 @@ import ChatView from "@/components/chat/ChatView";
 import BrowserView from "@/components/browser/BrowserView";
 import { BrowserInstance } from "@/types/browser";
 import { Interaction, InteractionEvent } from "@/types/test-execution";
+import { ExecutionDetailResponse } from "@/types/api";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -34,21 +35,16 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { convertEventsToMessages } from "@/lib/executions/event-to-message";
-
-interface ExecutionDetailResponse {
-  interaction: Interaction & { title: string | null };
-  events: InteractionEvent[];
-}
+import { safeParseInteractionMetadata } from "@/lib/db/metadata-helpers";
 
 export default function ExecutionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const executionId = params.id as string;
 
-  const [interaction, setInteraction] = useState<
-    (Interaction & { title: string | null }) | null
-  >(null);
+  const [interaction, setInteraction] = useState<Interaction | null>(null);
   const [events, setEvents] = useState<InteractionEvent[]>([]);
+  const [testTitle, setTestTitle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,19 +65,22 @@ export default function ExecutionDetailPage() {
         const data: ExecutionDetailResponse = await response.json();
         setInteraction(data.interaction);
         setEvents(data.events);
+        setTestTitle(data.title);
 
         // Try to get browser instance from metadata if available
-        const metadata = data.interaction.metadata as Record<string, unknown>;
+        const metadata = safeParseInteractionMetadata(
+          data.interaction.metadata
+        );
         const browserId = metadata.browserId;
-        if (typeof browserId === "string") {
+        if (browserId) {
           try {
             const browserResponse = await fetch(`/api/browser?id=${browserId}`);
             if (browserResponse.ok) {
               const browser: BrowserInstance = await browserResponse.json();
               setBrowserInstance(browser);
             }
-          } catch {
-            // Browser instance may no longer exist, that's okay
+          } catch (err) {
+            console.error("Error fetching browser instance:", err);
           }
         }
       } catch (err) {
@@ -258,7 +257,7 @@ export default function ExecutionDetailPage() {
         <div className="flex flex-col gap-1 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight truncate min-w-0">
-              {interaction.title || "Untitled Execution"}
+              {testTitle || "Untitled Execution"}
             </h1>
             {getStatusBadge(interaction.status)}
           </div>

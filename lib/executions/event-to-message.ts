@@ -1,30 +1,15 @@
-import { InteractionEvent } from "@/types/test-execution";
+import type { UIDataTypes, UIMessage, UITools } from "ai";
+import type { InteractionEvent } from "@/types/test-execution";
 
 /**
  * Converts interaction events to chat messages format for display in ChatView
  * Now handles raw streaming events (-start, -delta, -end) and reconstructs them
+ * Returns messages in AI SDK's UIMessage format
  */
 export function convertEventsToMessages(
   events: InteractionEvent[],
-): Array<{
-  id: string;
-  role: "user" | "assistant";
-  parts: Array<{
-    type: string;
-    text?: string;
-    [key: string]: unknown;
-  }>;
-}> {
-  const messages: Array<{
-    id: string;
-    role: "user" | "assistant";
-    parts: Array<{
-      type: string;
-      text?: string;
-      partSeq?: number;
-      [key: string]: unknown;
-    }>;
-  }> = [];
+): UIMessage<unknown, UIDataTypes, UITools>[] {
+  const messages: UIMessage<unknown, UIDataTypes, UITools>[] = [];
 
   if (events.length === 0) return [];
 
@@ -33,12 +18,18 @@ export function convertEventsToMessages(
     id: string;
     role: "user" | "assistant";
     firstSeq: number;
-    parts: Array<{
-      type: string;
-      text?: string;
-      partSeq?: number;
-      [key: string]: unknown;
-    }>;
+    parts: Array<
+      | { type: "text"; text: string; partSeq?: number }
+      | { type: "reasoning"; text: string; partSeq?: number }
+      | {
+        type: string;
+        toolCallId: string;
+        partSeq?: number;
+        input?: unknown;
+        output?: unknown;
+        state: string;
+      }
+    >;
   } | null = null;
 
   // Track accumulations for delta events by streamId
@@ -80,13 +71,24 @@ export function convertEventsToMessages(
           const seqB = b.partSeq ?? Infinity;
           return seqA - seqB;
         });
-        // Remove partSeq from final output
-        const cleanedParts = sortedParts.map(({ partSeq, ...part }) => part);
+        // Remove partSeq and convert to proper UIMessage parts
+        const cleanedParts = sortedParts.map((part) => {
+          if (
+            "text" in part &&
+            (part.type === "text" || part.type === "reasoning")
+          ) {
+            return { type: part.type, text: part.text };
+          }
+          // Tool parts - keep all necessary fields, remove partSeq
+          const { partSeq, ...toolPart } = part;
+          void partSeq; // Mark as intentionally unused
+          return toolPart;
+        });
         messages.push({
           id: currentMessage.id,
           role: currentMessage.role,
           parts: cleanedParts,
-        });
+        } as UIMessage<unknown, UIDataTypes, UITools>);
       }
 
       // Create new message
@@ -128,11 +130,19 @@ export function convertEventsToMessages(
         // Finalize and add to message
         const accumulator = streamAccumulators.get(streamId);
         if (accumulator) {
-          currentMessage.parts.push({
-            type: accumulator.type,
-            text: accumulator.text,
-            partSeq: accumulator.partSeq,
-          });
+          if (accumulator.type === "text") {
+            currentMessage.parts.push({
+              type: "text",
+              text: accumulator.text,
+              partSeq: accumulator.partSeq,
+            });
+          } else {
+            currentMessage.parts.push({
+              type: "reasoning",
+              text: accumulator.text,
+              partSeq: accumulator.partSeq,
+            });
+          }
           streamAccumulators.delete(streamId);
         }
       }
@@ -201,13 +211,23 @@ export function convertEventsToMessages(
       const seqB = b.partSeq ?? Infinity;
       return seqA - seqB;
     });
-    // Remove partSeq from final output
-    const cleanedParts = sortedParts.map(({ partSeq, ...part }) => part);
+    // Remove partSeq and convert to proper UIMessage parts
+    const cleanedParts = sortedParts.map((part) => {
+      if (
+        "text" in part && (part.type === "text" || part.type === "reasoning")
+      ) {
+        return { type: part.type, text: part.text };
+      }
+      // Tool parts - keep all necessary fields, remove partSeq
+      const { partSeq, ...toolPart } = part;
+      void partSeq; // Mark as intentionally unused
+      return toolPart;
+    });
     messages.push({
       id: currentMessage.id,
       role: currentMessage.role,
       parts: cleanedParts,
-    });
+    } as UIMessage<unknown, UIDataTypes, UITools>);
   }
 
   return messages;

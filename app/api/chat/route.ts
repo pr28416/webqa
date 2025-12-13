@@ -12,7 +12,8 @@ import { createStagehandInstance } from "@/lib/stagehand/instance";
 import { wrapStreamWithLogging } from "./stream-logger";
 import { db } from "@/lib/db";
 import { interactions } from "@/lib/db/schema/test-executions";
-import type { Interaction, InteractionMetadata } from "@/types/test-execution";
+import type { Interaction } from "@/types/test-execution";
+import { validateInteractionMetadata } from "@/lib/db/metadata-helpers";
 import {
   validateSchema,
   ValidationError,
@@ -58,15 +59,18 @@ export async function POST(request: NextRequest) {
     let interaction: Interaction;
 
     try {
+      // Validate metadata before inserting
+      const metadata = validateInteractionMetadata({
+        browserId,
+      });
+
       const [newInteraction] = await db
         .insert(interactions)
         .values({
           userPrompt,
           status: "running",
           testId,
-          metadata: {
-            browserId,
-          } satisfies InteractionMetadata,
+          metadata,
         })
         .returning();
 

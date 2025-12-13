@@ -1,3 +1,4 @@
+import { UIDataTypes, UIMessage, UITools } from "ai";
 import { Test } from "./test";
 import { Interaction } from "./test-execution";
 
@@ -23,4 +24,14 @@ export interface TestsResponse extends PaginationMeta {
  */
 export interface ExecutionsResponse extends PaginationMeta {
   interactions: Interaction[];
+}
+
+/**
+ * Request type for POST /api/chat
+ * Used for test execution requests sent from the chat interface
+ */
+export interface TestExecutionRequest {
+  messages: UIMessage<unknown, UIDataTypes, UITools>[];
+  browserId?: string;
+  testId: string | null;
 }

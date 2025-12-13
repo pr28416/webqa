@@ -9,7 +9,8 @@ import {
   interactions,
 } from "@/lib/db/schema/test-executions";
 import { normalizeEvent } from "@/lib/db/event-mapper";
-import type { InteractionMetadata } from "@/types/test-execution";
+import type { Interaction, InteractionMetadata } from "@/types/test-execution";
+import type { TestExecutionRequest } from "@/types/api";
 import { and, eq, sql } from "drizzle-orm";
 
 /**
@@ -18,12 +19,13 @@ import { and, eq, sql } from "drizzle-orm";
  * Handles chat messages and streams agent responses.
  * This endpoint is called by the UI chat component to interact with the AI agent.
  *
- * @param request - Next.js request containing messages array and browserId
+ * @param request - Next.js request containing messages array, browserId, and testId
  * @returns Streaming response with agent's text and tool calls
  */
 export async function POST(request: NextRequest) {
   try {
-    const { messages, browserId, testId } = await request.json();
+    const { messages, browserId, testId }: TestExecutionRequest = await request
+      .json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Find existing running interaction for this browser session, or create new one
     // Use a retry pattern to handle race conditions where multiple requests
     // try to create an interaction simultaneously
-    let interaction = await db
+    let interaction: Interaction | null = await db
       .select()
       .from(interactions)
       .where(

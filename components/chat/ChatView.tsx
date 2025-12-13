@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrowserInstance } from "@/types/browser";
+import type { TestExecutionRequest } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
@@ -240,16 +241,13 @@ const ChatView = forwardRef<ChatViewRef, ChatViewProps>(
       // eslint-disable-next-line react-hooks/refs
       return new DefaultChatTransport({
         api: "/api/chat",
-        prepareSendMessagesRequest: ({ id, messages, trigger, body }) => {
+        prepareSendMessagesRequest: ({ messages }) => {
           const currentBrowserId = browserInstanceRef.current?.id;
           const currentTestId = testIdRef.current;
-          const requestBody = {
-            id,
+          const requestBody: TestExecutionRequest = {
             messages,
-            trigger,
-            ...body,
             browserId: currentBrowserId,
-            testId: currentTestId,
+            testId: currentTestId ?? null,
           };
           console.log("Messages:", messages);
           return { body: requestBody };

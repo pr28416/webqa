@@ -1,0 +1,47 @@
+import { UIDataTypes, UIMessage, UITools } from "ai";
+import { Test } from "./test";
+import { Interaction, InteractionEvent } from "./test-execution";
+
+/**
+ * Common pagination metadata for API responses
+ */
+export interface PaginationMeta {
+  limit: number;
+  offset: number;
+  count: number;
+  total?: number;
+}
+
+/**
+ * Response type for GET /api/tests
+ */
+export interface TestsResponse extends PaginationMeta {
+  tests: Test[];
+}
+
+/**
+ * Response type for GET /api/executions (interactions)
+ */
+export interface ExecutionsResponse extends PaginationMeta {
+  interactions: Interaction[];
+}
+
+/**
+ * Request type for POST /api/chat
+ * Used for test execution requests sent from the chat interface
+ */
+export interface TestExecutionRequest {
+  messages: UIMessage<unknown, UIDataTypes, UITools>[];
+  browserId: string;
+  testId: string;
+}
+
+/**
+ * Response type for GET /api/executions/[id]
+ * Returns a single execution (interaction) with its events and test title
+ */
+export interface ExecutionDetailResponse {
+  interaction: Interaction;
+  events: InteractionEvent[];
+  title: string | null;
+}

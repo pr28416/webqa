@@ -44,81 +44,126 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* 
+ * Ramp-inspired Design System
+ * 
+ * A warm, professional aesthetic with:
+ * - Stone/cream backgrounds (not pure white)
+ * - Warm gray text (not pure black)
+ * - Muted olive-yellow accents
+ * - Ultra-subtle borders and shadows
+ * - Clean, refined typography
+ */
+
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.375rem;
+
+  /* Background hierarchy - lighter, closer to white */
+  --background: oklch(0.992 0.0015 85);
+  --foreground: oklch(0.32 0.015 55);
+
+  /* Cards - slightly elevated from background */
+  --card: oklch(0.995 0.002 85);
+  --card-foreground: oklch(0.32 0.015 55);
+
+  /* Popovers - brightest surface */
+  --popover: oklch(0.998 0.001 85);
+  --popover-foreground: oklch(0.32 0.015 55);
+
+  /* Primary - Medium blue-gray (between #213448 and #547792) */
+  --primary: oklch(0.36 0.045 240);
+  --primary-foreground: oklch(0.99 0 0);
+
+  /* Secondary - Warm gray with more contrast from background */
+  --secondary: oklch(0.94 0.006 85);
+  --secondary-foreground: oklch(0.32 0.015 55);
+
+  /* Muted - Subtle but distinct from secondary */
+  --muted: oklch(0.95 0.005 85);
+  --muted-foreground: oklch(0.5 0.015 55);
+
+  /* Accent - Ramp's signature muted olive/yellow (for primary actions) */
+  --accent: oklch(0.91 0.08 95);
+  --accent-foreground: oklch(0.32 0.03 75);
+
+  /* Destructive */
+  --destructive: oklch(0.58 0.22 25);
+
+  /* Borders - More visible warm gray */
+  --border: oklch(0.88 0.006 85);
+  --input: oklch(0.88 0.006 85);
+  --ring: oklch(0.6 0.015 55);
+
+  /* Chart colors - More vibrant palette */
+  --chart-1: oklch(0.58 0.18 40);
+  --chart-2: oklch(0.62 0.12 175);
+  --chart-3: oklch(0.5 0.1 230);
+  --chart-4: oklch(0.72 0.16 85);
+  --chart-5: oklch(0.68 0.2 65);
+
+  /* Sidebar - More distinct from main background */
+  --sidebar: oklch(0.97 0.004 85);
+  --sidebar-foreground: oklch(0.32 0.015 55);
+  --sidebar-primary: oklch(0.35 0.015 55);
+  --sidebar-primary-foreground: oklch(0.98 0.002 85);
+  --sidebar-accent: oklch(0.93 0.008 85);
+  --sidebar-accent-foreground: oklch(0.32 0.015 55);
+  --sidebar-border: oklch(0.88 0.006 85);
+  --sidebar-ring: oklch(0.6 0.015 55);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.15 0.008 55);
+  --foreground: oklch(0.94 0.004 85);
+
+  --card: oklch(0.19 0.008 55);
+  --card-foreground: oklch(0.94 0.004 85);
+
+  --popover: oklch(0.2 0.008 55);
+  --popover-foreground: oklch(0.94 0.004 85);
+
+  --primary: oklch(0.9 0.004 85);
+  --primary-foreground: oklch(0.2 0.008 55);
+
+  --secondary: oklch(0.24 0.008 55);
+  --secondary-foreground: oklch(0.9 0.004 85);
+
+  --muted: oklch(0.22 0.008 55);
+  --muted-foreground: oklch(0.65 0.012 55);
+
+  --accent: oklch(0.4 0.06 95);
+  --accent-foreground: oklch(0.94 0.004 85);
+
+  --destructive: oklch(0.62 0.2 22);
+
+  --border: oklch(0.3 0.008 55);
+  --input: oklch(0.3 0.008 55);
+  --ring: oklch(0.55 0.015 55);
+
+  --chart-1: oklch(0.55 0.22 265);
+  --chart-2: oklch(0.68 0.16 160);
+  --chart-3: oklch(0.7 0.18 70);
+  --chart-4: oklch(0.62 0.25 305);
+  --chart-5: oklch(0.65 0.24 18);
+
+  --sidebar: oklch(0.16 0.01 55);
+  --sidebar-foreground: oklch(0.94 0.004 85);
+  --sidebar-primary: oklch(0.55 0.22 265);
+  --sidebar-primary-foreground: oklch(0.94 0.004 85);
+  --sidebar-accent: oklch(0.23 0.01 55);
+  --sidebar-accent-foreground: oklch(0.94 0.004 85);
+  --sidebar-border: oklch(0.28 0.01 55);
+  --sidebar-ring: oklch(0.55 0.015 55);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   /* Tighter spacing for markdown in chat */
@@ -180,6 +225,19 @@
 
   .prose
     :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
-    @apply px-1 py-0.5 rounded bg-muted;
+    @apply px-1 py-0.5 rounded bg-muted text-[0.875em];
+  }
+}
+
+/* Custom utility classes for Ramp-style design */
+@layer utilities {
+  /* Subtle hover background */
+  .hover-subtle {
+    @apply transition-colors hover:bg-muted/60;
+  }
+
+  /* Ramp-style muted yellow button */
+  .btn-accent {
+    @apply bg-accent text-accent-foreground hover:bg-accent/80 border-0;
   }
 }

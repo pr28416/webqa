@@ -1,15 +1,25 @@
-import { createAgentUIStreamResponse } from "ai";
+import {
+  createAgentUIStreamResponse,
+  isTextUIPart,
+  UIDataTypes,
+  UIMessage,
+  UITools,
+} from "ai";
 import { NextRequest } from "next/server";
 import Kernel from "@onkernel/sdk";
 import { createChatAgent } from "@/lib/agents/chat-agent";
 import { createStagehandInstance } from "@/lib/stagehand/instance";
+import { wrapStreamWithLogging } from "./stream-logger";
 import { db } from "@/lib/db";
+import { interactions } from "@/lib/db/schema/test-executions";
+import type { Interaction } from "@/types/test-execution";
+import { validateInteractionMetadata } from "@/lib/db/metadata-helpers";
 import {
-  interactionEvents,
-  interactions,
-} from "@/lib/db/schema/test-executions";
-import { normalizeEvent } from "@/lib/db/event-mapper";
-import type { InteractionMetadata } from "@/types/test-execution";
+  validateSchema,
+  ValidationError,
+  validationErrorToResponse,
+} from "@/lib/validation";
+import { testExecutionRequestSchema } from "@/lib/schemas/api";
 import { and, eq, sql } from "drizzle-orm";
 
 /**
@@ -18,105 +28,87 @@ import { and, eq, sql } from "drizzle-orm";
  * Handles chat messages and streams agent responses.
  * This endpoint is called by the UI chat component to interact with the AI agent.
  *
- * @param request - Next.js request containing messages array and browserId
+ * @param request - Next.js request containing messages array, browserId, and testId
  * @returns Streaming response with agent's text and tool calls
  */
 export async function POST(request: NextRequest) {
   try {
-    const { messages, browserId } = await request.json();
+    // Validate entire request body against schema
+    const { messages, browserId, testId } = validateSchema(
+      await request.json(),
+      testExecutionRequestSchema,
+      "Invalid request body",
+    );
 
-    if (!messages || !Array.isArray(messages)) {
-      return new Response(
-        JSON.stringify({ error: "Messages array is required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+    // Extract user prompt from the first user message
+    const userMessage = messages.find(
+      (m): m is UIMessage<unknown, UIDataTypes, UITools> => m.role === "user",
+    );
+    const firstPart = userMessage?.parts?.[0];
+    const userPrompt = firstPart && isTextUIPart(firstPart)
+      ? firstPart.text
+      : undefined;
+
+    if (!userPrompt) {
+      throw new Error("User prompt is required");
     }
 
-    if (!browserId || typeof browserId !== "string") {
-      return new Response(JSON.stringify({ error: "Browser ID is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
+    // Optimistically try to create a new interaction
+    // The unique index on (browserId, status='running') prevents duplicates
+    // If an interaction already exists, we'll catch the error and fetch it
+    let interaction: Interaction;
+
+    try {
+      // Validate metadata before inserting
+      const metadata = validateInteractionMetadata({
+        browserId,
       });
-    }
 
-    // Find existing running interaction for this browser session, or create new one
-    // Use a retry pattern to handle race conditions where multiple requests
-    // try to create an interaction simultaneously
-    let interaction = await db
-      .select()
-      .from(interactions)
-      .where(
-        and(
-          sql`${interactions.metadata}->>'browserId' = ${browserId}`,
-          eq(interactions.status, "running"),
-        ),
-      )
-      .limit(1)
-      .then((rows) => rows[0]);
+      const [newInteraction] = await db
+        .insert(interactions)
+        .values({
+          userPrompt,
+          status: "running",
+          testId,
+          metadata,
+        })
+        .returning();
 
-    if (!interaction) {
-      // Extract user prompt from the first user message
-      const userMessage = messages.find((m: { role: string }) =>
-        m.role === "user"
+      interaction = newInteraction;
+
+      console.log(
+        `[Test Execution] Created new interaction ${interaction.interactionId}`,
       );
-      const userPrompt = userMessage?.parts?.[0]?.text ||
-        userMessage?.content ||
-        "Test execution";
+    } catch (error) {
+      // If insert fails due to unique constraint violation,
+      // another request already created an interaction - fetch it
+      if (error instanceof Error && error.message.includes("unique")) {
+        const [existingInteraction] = await db
+          .select()
+          .from(interactions)
+          .where(
+            and(
+              sql`${interactions.metadata}->>'browserId' = ${browserId}`,
+              eq(interactions.status, "running"),
+            ),
+          )
+          .limit(1);
 
-      try {
-        // Try to create new interaction record
-        // The unique index on (browserId, status='running') prevents duplicates
-        const [newInteraction] = await db
-          .insert(interactions)
-          .values({
-            userPrompt,
-            status: "running",
-            metadata: {
-              browserId,
-            } satisfies InteractionMetadata,
-          })
-          .returning();
+        if (!existingInteraction) {
+          throw new Error(
+            "Failed to find interaction after constraint violation",
+          );
+        }
 
-        interaction = newInteraction;
+        interaction = existingInteraction;
 
         console.log(
-          `[Test Execution] Created new interaction ${interaction.interactionId}`,
+          `[Test Execution] Reusing existing interaction ${interaction.interactionId}`,
         );
-      } catch (error) {
-        // If insert fails due to unique constraint violation (race condition),
-        // another request created the interaction - fetch it
-        if (error instanceof Error && error.message.includes("unique")) {
-          interaction = await db
-            .select()
-            .from(interactions)
-            .where(
-              and(
-                sql`${interactions.metadata}->>'browserId' = ${browserId}`,
-                eq(interactions.status, "running"),
-              ),
-            )
-            .limit(1)
-            .then((rows) => rows[0]);
-
-          if (!interaction) {
-            // This should never happen, but throw if we still can't find it
-            throw new Error(
-              "Failed to create or find interaction for browser session",
-            );
-          }
-
-          console.log(
-            `[Test Execution] Race condition detected, using existing interaction ${interaction.interactionId}`,
-          );
-        } else {
-          // Re-throw other errors
-          throw error;
-        }
+      } else {
+        // Re-throw other errors
+        throw error;
       }
-    } else {
-      console.log(
-        `[Test Execution] Reusing existing interaction ${interaction.interactionId}`,
-      );
     }
 
     // Get the existing browser instance from Kernel
@@ -132,218 +124,22 @@ export async function POST(request: NextRequest) {
     // Create abort controller for cancellation support (client-side disconnects)
     const abortController = new AbortController();
 
-    // Get the original stream response (await it since it returns a Promise)
+    // Get the original stream response from the agent
     const originalResponse = await createAgentUIStreamResponse({
       agent,
       messages,
       abortSignal: abortController.signal,
     });
 
-    // Track sequence number for events
-    let seq = 0;
-    let hasError = false;
-
-    // State tracking for merging deltas
-    const streamAccumulators = new Map<string, {
-      role: "system" | "user" | "assistant" | "tool";
-      eventFamily:
-        | "lifecycle"
-        | "text"
-        | "reasoning"
-        | "tool-input"
-        | "tool-output"
-        | "data"
-        | "error";
-      eventType: string;
-      accumulatedText: string;
-      startPayload: Record<string, unknown>;
-    }>();
-
-    // Create a TransformStream to intercept and log all chunks
-    const loggingStream = new TransformStream({
-      async transform(chunk, controller) {
-        try {
-          // Decode the chunk (it's a Uint8Array)
-          const decoder = new TextDecoder();
-          const text = decoder.decode(chunk);
-
-          // Parse SSE format: "data: {...}\n\n"
-          const lines = text.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const jsonStr = line.slice(6); // Remove "data: " prefix
-
-              // Skip [DONE] marker - it's not JSON
-              if (jsonStr === "[DONE]") {
-                continue;
-              }
-
-              try {
-                const event = JSON.parse(jsonStr);
-                const normalized = normalizeEvent(event);
-
-                if (normalized) {
-                  const { eventType, eventFamily, streamId, role, payload } =
-                    normalized;
-
-                  // Determine if this is a delta-based event family
-                  const isDeltaFamily = eventFamily === "text" ||
-                    eventFamily === "reasoning" ||
-                    eventFamily === "tool-input";
-
-                  // Handle delta merging for text, reasoning, and tool-input
-                  if (eventType.endsWith("-start") && isDeltaFamily) {
-                    // Start accumulating
-                    if (streamId) {
-                      streamAccumulators.set(streamId, {
-                        role,
-                        eventFamily,
-                        eventType: eventFamily, // Store as "text", "reasoning", or "tool-input" (not "text-start")
-                        accumulatedText: "",
-                        startPayload: payload,
-                      });
-                    }
-                  } else if (eventType.endsWith("-delta") && isDeltaFamily) {
-                    // Accumulate delta
-                    if (streamId && streamAccumulators.has(streamId)) {
-                      const accumulator = streamAccumulators.get(streamId)!;
-                      const delta = typeof payload.delta === "string"
-                        ? payload.delta
-                        : typeof payload.text === "string"
-                        ? payload.text
-                        : "";
-                      accumulator.accumulatedText += delta;
-                    }
-                  } else if (
-                    (eventType.endsWith("-end") ||
-                      eventType.endsWith("-available")) &&
-                    isDeltaFamily
-                  ) {
-                    // Write final merged event
-                    // Note: tool-input uses "available" instead of "end"
-                    if (streamId && streamAccumulators.has(streamId)) {
-                      const accumulator = streamAccumulators.get(streamId)!;
-
-                      db.insert(interactionEvents)
-                        .values({
-                          interactionId: interaction.interactionId,
-                          seq: seq++,
-                          role: accumulator.role,
-                          eventFamily: accumulator.eventFamily,
-                          eventType: accumulator.eventType,
-                          payload: {
-                            ...accumulator.startPayload,
-                            text: accumulator.accumulatedText,
-                          },
-                          streamId,
-                        })
-                        .catch((error) => {
-                          console.error(
-                            "[Test Execution] Failed to save event:",
-                            error,
-                          );
-                        });
-
-                      // Clean up accumulator
-                      streamAccumulators.delete(streamId);
-                    }
-                  } else {
-                    // For non-delta events (lifecycle, tool-output, data, error, source, file, etc), store immediately
-                    db.insert(interactionEvents)
-                      .values({
-                        interactionId: interaction.interactionId,
-                        seq: seq++,
-                        role,
-                        eventFamily,
-                        eventType,
-                        payload,
-                        streamId,
-                      })
-                      .catch((error) => {
-                        console.error(
-                          "[Test Execution] Failed to save event:",
-                          error,
-                        );
-                      });
-                  }
-
-                  // Check for finish or error events
-                  if (eventType === "finish") {
-                    // Update interaction status on finish
-                    db.update(interactions)
-                      .set({
-                        status: hasError ? "error" : "passed",
-                        finishedAt: new Date(),
-                      })
-                      .where(
-                        eq(
-                          interactions.interactionId,
-                          interaction.interactionId,
-                        ),
-                      )
-                      .catch((error) => {
-                        console.error(
-                          "[Test Execution] Failed to update interaction:",
-                          error,
-                        );
-                      });
-                  } else if (eventFamily === "error") {
-                    hasError = true;
-                  }
-                }
-              } catch (error) {
-                // Not JSON or not a data event
-                console.error("[Test Execution] Failed to parse event:", error);
-              }
-            }
-          }
-        } catch (error) {
-          console.error("[Test Execution] Error processing chunk:", error);
-          // Don't throw - we want to keep streaming to the client
-        }
-
-        // Always forward the chunk to the client
-        controller.enqueue(chunk);
-      },
-
-      async flush() {
-        // Stream ended - ensure interaction is marked as complete
-        console.log(
-          `[Test Execution] Stream ended for interaction ${interaction.interactionId}`,
-        );
-
-        // Final update if not already done
-        db.update(interactions)
-          .set({
-            status: hasError ? "error" : "passed",
-            finishedAt: new Date(),
-          })
-          .where(eq(interactions.interactionId, interaction.interactionId))
-          .catch((error) => {
-            console.error(
-              "[Test Execution] Failed to update interaction on flush:",
-              error,
-            );
-          });
-      },
-    });
-
-    // Ensure response body exists
-    if (!originalResponse.body) {
-      throw new Error("Response body is null - cannot stream events");
-    }
-
-    // Pipe the original stream through our logging stream
-    const transformedBody = originalResponse.body.pipeThrough(loggingStream);
-
-    // Return new response with the transformed stream
-    return new Response(transformedBody, {
-      status: originalResponse.status,
-      statusText: originalResponse.statusText,
-      headers: originalResponse.headers,
-    });
+    // Wrap with database logging (transparently logs events while streaming to client)
+    return wrapStreamWithLogging(originalResponse, interaction);
   } catch (error) {
     console.error("Error in chat API:", error);
+
+    // Handle validation errors with proper status codes
+    if (error instanceof ValidationError) {
+      return validationErrorToResponse(error);
+    }
 
     if (error instanceof Error) {
       return new Response(JSON.stringify({ error: error.message }), {

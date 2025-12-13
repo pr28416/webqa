@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   if (!id) {
     return NextResponse.json(
       { error: "Browser ID is required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
   // Retrieve browser instance from Kernel API
@@ -62,10 +62,24 @@ export async function DELETE(request: NextRequest) {
   if (!id) {
     return NextResponse.json(
       { error: "Browser ID is required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
-  // Delete browser instance from Kernel API
-  await kernel.browsers.deleteByID(id);
-  return NextResponse.json({});
+
+  try {
+    // Delete browser instance from Kernel API
+    await kernel.browsers.deleteByID(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    // For other errors, log and return error response
+    console.error("Error deleting browser:", error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error
+          ? error.message
+          : "Failed to delete browser",
+      },
+      { status: 500 },
+    );
+  }
 }

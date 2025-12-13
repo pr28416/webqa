@@ -107,7 +107,10 @@ export default function TestsPage() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/tests" className="text-xs text-muted-foreground hover:text-foreground">
+                <BreadcrumbLink
+                  href="/tests"
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
                   WebQA
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -116,8 +119,8 @@ export default function TestsPage() {
         </div>
         {/* Action Buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          <Button 
-            onClick={handleCreateNewTest} 
+          <Button
+            onClick={handleCreateNewTest}
             className="gap-2"
             disabled={isCreatingTest}
           >
@@ -154,7 +157,9 @@ export default function TestsPage() {
             icon={FileText}
             title="No tests yet"
             description="Get started by creating your first test. Tests are reusable definitions that can be executed multiple times."
-            actionLabel={isCreatingTest ? "Creating..." : "Create your first test"}
+            actionLabel={
+              isCreatingTest ? "Creating..." : "Create your first test"
+            }
             onAction={handleCreateNewTest}
           />
         ) : (

@@ -5,7 +5,7 @@ import { InteractionEvent } from "@/types/test-execution";
  * Now handles raw streaming events (-start, -delta, -end) and reconstructs them
  */
 export function convertEventsToMessages(
-  events: InteractionEvent[]
+  events: InteractionEvent[],
 ): Array<{
   id: string;
   role: "user" | "assistant";
@@ -101,7 +101,8 @@ export function convertEventsToMessages(
 
     // Handle text and reasoning events (with -start, -delta, -end)
     if (event.eventFamily === "text" || event.eventFamily === "reasoning") {
-      const streamId = event.streamId || `${event.eventFamily}-${event.interactionEventId}`;
+      const streamId = event.streamId ||
+        `${event.eventFamily}-${event.interactionEventId}`;
       const partType = event.eventFamily;
 
       if (eventType.endsWith("-start")) {
@@ -116,12 +117,11 @@ export function convertEventsToMessages(
         // Accumulate delta
         const accumulator = streamAccumulators.get(streamId);
         if (accumulator) {
-          const delta =
-            typeof payload.delta === "string"
-              ? payload.delta
-              : typeof payload.text === "string"
-              ? payload.text
-              : "";
+          const delta = typeof payload.delta === "string"
+            ? payload.delta
+            : typeof payload.text === "string"
+            ? payload.text
+            : "";
           accumulator.text += delta;
         }
       } else if (eventType.endsWith("-end")) {
@@ -136,8 +136,7 @@ export function convertEventsToMessages(
           streamAccumulators.delete(streamId);
         }
       }
-    }
-    // Handle tool events
+    } // Handle tool events
     else if (
       event.eventFamily === "tool-input" ||
       event.eventFamily === "tool-output"
@@ -147,8 +146,9 @@ export function convertEventsToMessages(
         event.streamId ||
         `tool-${event.interactionEventId}`;
 
-      const toolName =
-        typeof payload.toolName === "string" ? payload.toolName : "unknown";
+      const toolName = typeof payload.toolName === "string"
+        ? payload.toolName
+        : "unknown";
       const toolType = `tool-${toolName}`;
 
       if (event.eventFamily === "tool-input") {
@@ -212,4 +212,3 @@ export function convertEventsToMessages(
 
   return messages;
 }
-

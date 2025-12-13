@@ -172,20 +172,6 @@ export default function TestDetailPage() {
     setHasUnsavedChanges(true);
   }
 
-  async function handleSaveTitle() {
-    if (!editedTest.title?.trim()) {
-      if (test) {
-        setEditedTest((prev) => ({ ...prev, title: test.title }));
-      }
-      setIsEditingTitle(false);
-      return;
-    }
-
-    // Auto-save title changes
-    await handleSaveChanges();
-    setIsEditingTitle(false);
-  }
-
   async function handleSaveChanges() {
     if (!editedTest.title?.trim()) {
       alert("Test title cannot be empty");
@@ -336,10 +322,10 @@ export default function TestDetailPage() {
             <Input
               value={editedTest.title || ""}
               onChange={(e) => handleTitleChange(e.target.value)}
-              onBlur={handleSaveTitle}
+              onBlur={() => setIsEditingTitle(false)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  handleSaveTitle();
+                  setIsEditingTitle(false);
                 } else if (e.key === "Escape") {
                   if (test) {
                     setEditedTest((prev) => ({ ...prev, title: test.title }));

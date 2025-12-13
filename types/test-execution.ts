@@ -1,4 +1,7 @@
-import { interactions, interactionEvents } from "@/lib/db/schema/test-executions";
+import {
+  interactionEvents,
+  interactions,
+} from "@/lib/db/schema/test-executions";
 
 /**
  * Type-safe representation of an interaction (test execution) record
@@ -23,12 +26,17 @@ export type NewInteractionEvent = typeof interactionEvents.$inferInsert;
 /**
  * Valid status values for an interaction
  */
-export type InteractionStatus = "running" | "passed" | "failed" | "error" | "canceled";
+export type InteractionStatus =
+  | "running"
+  | "passed"
+  | "failed"
+  | "error"
+  | "canceled";
 
 /**
  * Event family classification for grouping similar events
  */
-export type EventFamily = 
+export type EventFamily =
   | "lifecycle"
   | "text"
   | "reasoning"
@@ -53,4 +61,3 @@ export interface InteractionMetadata {
   environment?: string;
   [key: string]: unknown;
 }
-

@@ -33,7 +33,9 @@ export const columns: ColumnDef<Interaction>[] = [
       return (
         <div className="max-w-xs truncate font-medium text-foreground">
           {title || (
-            <span className="font-normal text-muted-foreground">Untitled Test</span>
+            <span className="font-normal text-muted-foreground">
+              Untitled Test
+            </span>
           )}
         </div>
       );
@@ -151,13 +153,18 @@ export const columns: ColumnDef<Interaction>[] = [
       const startedAt = row.original.startedAt;
       const finishedAt = row.original.finishedAt;
 
-      if (!startedAt || !finishedAt) return <span className="text-muted-foreground">—</span>;
+      if (!startedAt || !finishedAt)
+        return <span className="text-muted-foreground">—</span>;
 
       const duration = Math.round(
         (new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000
       );
 
-      return <span className="text-sm text-muted-foreground tabular-nums">{duration}s</span>;
+      return (
+        <span className="text-sm text-muted-foreground tabular-nums">
+          {duration}s
+        </span>
+      );
     },
   },
 ];

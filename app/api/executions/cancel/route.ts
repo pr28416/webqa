@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
-import { eq, and, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 /**
  * POST /api/executions/cancel
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (!browserId || typeof browserId !== "string") {
       return NextResponse.json(
         { error: "Browser ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -27,19 +27,22 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           sql`${schema.interactions.metadata}->>'browserId' = ${browserId}`,
-          eq(schema.interactions.status, "running")
-        )
+          eq(schema.interactions.status, "running"),
+        ),
       )
       .returning();
 
     if (!updatedInteraction) {
       return NextResponse.json(
         { error: "No running interaction found for this browser session" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    return NextResponse.json({ success: true, interaction: updatedInteraction });
+    return NextResponse.json({
+      success: true,
+      interaction: updatedInteraction,
+    });
   } catch (error) {
     console.error("Error canceling execution:", error);
     if (error instanceof Error) {
@@ -47,8 +50,7 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(
       { error: "An unexpected error occurred" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
-import { eq, asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 interface RouteContext {
   params: Promise<{
@@ -14,7 +14,7 @@ interface RouteContext {
  */
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  context: RouteContext,
 ) {
   try {
     const { id } = await context.params;
@@ -22,7 +22,7 @@ export async function GET(
     if (!id) {
       return NextResponse.json(
         { error: "Test ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -35,7 +35,7 @@ export async function GET(
       .from(schema.interactions)
       .leftJoin(
         schema.tests,
-        eq(schema.interactions.testId, schema.tests.testId)
+        eq(schema.interactions.testId, schema.tests.testId),
       )
       .where(eq(schema.interactions.interactionId, id))
       .limit(1);
@@ -43,7 +43,7 @@ export async function GET(
     if (!result) {
       return NextResponse.json(
         { error: "Test execution not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -71,7 +71,7 @@ export async function GET(
     }
     return NextResponse.json(
       { error: "An unexpected error occurred" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -82,7 +82,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  context: RouteContext
+  context: RouteContext,
 ) {
   try {
     const { id } = await context.params;
@@ -90,7 +90,7 @@ export async function PATCH(
     if (!id) {
       return NextResponse.json(
         { error: "Test ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -101,11 +101,17 @@ export async function PATCH(
     const updateData: Partial<typeof schema.interactions.$inferInsert> = {};
 
     if (status !== undefined) {
-      const validStatuses = ["running", "passed", "failed", "error", "canceled"];
+      const validStatuses = [
+        "running",
+        "passed",
+        "failed",
+        "error",
+        "canceled",
+      ];
       if (!validStatuses.includes(status)) {
         return NextResponse.json(
           { error: `Status must be one of: ${validStatuses.join(", ")}` },
-          { status: 400 }
+          { status: 400 },
         );
       }
       updateData.status = status;
@@ -117,7 +123,7 @@ export async function PATCH(
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
         { error: "No fields to update" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -131,7 +137,7 @@ export async function PATCH(
     if (!updatedInteraction) {
       return NextResponse.json(
         { error: "Test execution not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -143,7 +149,7 @@ export async function PATCH(
     }
     return NextResponse.json(
       { error: "An unexpected error occurred" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

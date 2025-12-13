@@ -134,12 +134,8 @@
           "name": "interaction_events_interaction_id_interactions_interaction_id_fk",
           "tableFrom": "interaction_events",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "interaction_id"
-          ],
-          "columnsTo": [
-            "interaction_id"
-          ],
+          "columnsFrom": ["interaction_id"],
+          "columnsTo": ["interaction_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -260,12 +256,8 @@
           "name": "interactions_test_id_tests_test_id_fk",
           "tableFrom": "interactions",
           "tableTo": "tests",
-          "columnsFrom": [
-            "test_id"
-          ],
-          "columnsTo": [
-            "test_id"
-          ],
+          "columnsFrom": ["test_id"],
+          "columnsTo": ["test_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
